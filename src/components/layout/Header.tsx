@@ -63,8 +63,11 @@ export default function Header({
           </svg>
         </div>
         <div>
-          <span className="text-sm font-semibold tracking-tight font-display">
-            Clinical MDT Timeline
+          <span className="text-sm font-bold tracking-tight font-display text-sky-200">
+            MDT
+          </span>
+          <span className="text-xs font-medium ml-1.5 text-slate-300 hidden sm:inline">
+            Evidence Timeline System
           </span>
           <span className="text-[9px] font-mono ml-1.5 text-white/40 hidden lg:inline">
             SAFETY-CRITICAL V2.0

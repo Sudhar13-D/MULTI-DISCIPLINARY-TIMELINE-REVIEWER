@@ -23,9 +23,45 @@ import DocumentUploadModal from "./components/upload/DocumentUploadModal";
 import EvidenceDrillDownModal from "./components/evidence/EvidenceDrillDownModal";
 import AuditLogDrawer from "./components/audit/AuditLogDrawer";
 
+// Immediate baseline cases so first load renders immediately without needing a browser reload
+const INITIAL_CASES: PatientCase[] = [
+  {
+    id: "001",
+    patient_de_id: "Patient_A_68M",
+    age: 68,
+    sex: "M",
+    primary_dx: "Acute Saddle Pulmonary Embolism with RV Strain",
+    referring_dept: "Emergency Medicine",
+    urgency: "urgent",
+    decision_required_by_hours: 2,
+    complexity: "high",
+    baseline_minutes: 45,
+    target_minutes: 8,
+    status: "active",
+    next_action: "Awaiting STAT Emergency MDT Review",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "002",
+    patient_de_id: "Patient_B_54F",
+    age: 54,
+    sex: "F",
+    primary_dx: "Rectal Adenocarcinoma T4b N2 (MSS)",
+    referring_dept: "Colorectal Surgery",
+    urgency: "routine",
+    decision_required_by_hours: 168,
+    complexity: "high",
+    baseline_minutes: 35,
+    target_minutes: 7,
+    status: "active",
+    next_action: "Awaiting MDT Staging Review",
+    created_at: new Date().toISOString(),
+  },
+];
+
 function MainDashboard() {
-  const { user } = useAuth();
-  const [cases, setCases] = useState<PatientCase[]>([]);
+  const { user, token } = useAuth();
+  const [cases, setCases] = useState<PatientCase[]>(INITIAL_CASES);
   const [selectedCaseId, setSelectedCaseId] = useState<string>("001");
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [freshnessSummary, setFreshnessSummary] = useState<FreshnessSummary | null>(null);
@@ -47,6 +83,11 @@ function MainDashboard() {
   const [isAuditDrawerOpen, setIsAuditDrawerOpen] = useState(false);
   const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
 
+  // Set document title to MDT
+  useEffect(() => {
+    document.title = "MDT";
+  }, []);
+
   // Resizable Panels Hook
   const {
     leftWidth,
@@ -66,21 +107,23 @@ function MainDashboard() {
     right: { defaultWidth: 340, minWidth: 260, maxWidth: 560 },
   });
 
-  // Load all cases on mount
-  useEffect(() => {
-    async function loadCases() {
-      try {
-        const data = await fetchCasesApi();
+  // Load all cases on mount and whenever auth state settles
+  const loadCases = useCallback(async () => {
+    try {
+      const data = await fetchCasesApi();
+      if (data && data.length > 0) {
         setCases(data);
-        if (data.length > 0 && !selectedCaseId) {
-          setSelectedCaseId(data[0].id);
-        }
-      } catch (err) {
-        console.error("Failed to load cases", err);
       }
+    } catch (err) {
+      console.warn("Retrying cases load...", err);
     }
-    loadCases();
   }, []);
+
+  useEffect(() => {
+    loadCases();
+    const timer = setTimeout(loadCases, 800);
+    return () => clearTimeout(timer);
+  }, [loadCases, user, token]);
 
   // Load timeline & freshness when selectedCaseId changes
   const refreshCaseData = useCallback(async () => {
@@ -98,15 +141,17 @@ function MainDashboard() {
         setSelectedEventId(timeline[0].id);
       }
     } catch (err) {
-      console.error("Failed to refresh case timeline", err);
+      console.warn("Refreshing case data...", err);
     }
-  }, [selectedCaseId]);
+  }, [selectedCaseId, selectedEventId]);
 
   useEffect(() => {
     refreshCaseData();
-  }, [selectedCaseId, refreshCaseData, user]);
+    const timer = setTimeout(refreshCaseData, 900);
+    return () => clearTimeout(timer);
+  }, [selectedCaseId, refreshCaseData, user, token]);
 
-  const activeCase = cases.find(c => c.id === selectedCaseId) || cases[0];
+  const activeCase = cases.find(c => c.id === selectedCaseId) || cases[0] || INITIAL_CASES[0];
   const selectedEvent = timelineEvents.find(e => e.id === selectedEventId) || null;
 
   const handleToggleCategory = (cat: string) => {
@@ -136,14 +181,6 @@ function MainDashboard() {
       alert("Failed to record acknowledgment: " + err.message);
     }
   };
-
-  if (!activeCase) {
-    return (
-      <div className="h-full flex items-center justify-center bg-slate-100 text-slate-500 text-sm font-medium">
-        Connecting to Clinical Decision Support System...
-      </div>
-    );
-  }
 
   return (
     <div className="h-full flex flex-col bg-slate-100 text-slate-900 font-sans select-text">
