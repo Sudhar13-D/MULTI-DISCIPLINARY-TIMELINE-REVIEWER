@@ -3,7 +3,7 @@ import sqlite3
 from typing import Generator
 from contextlib import contextmanager
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "clinical_mdt.db")
+DB_PATH = os.getenv("DB_PATH", os.path.join(os.path.dirname(__file__), "clinical_mdt.db"))
 
 def get_db_connection() -> sqlite3.Connection:
     """Returns a connection to the SQLite database with WAL mode and row factory."""

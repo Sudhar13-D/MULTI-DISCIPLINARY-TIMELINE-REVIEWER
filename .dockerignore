@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.gitignore
+*.log
+backend/__pycache__
+backend/*.pyc
+backend/*.db*
+docs
+presentation
+experiment
+data-generation

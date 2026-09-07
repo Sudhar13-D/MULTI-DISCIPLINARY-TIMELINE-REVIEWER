@@ -1,0 +1,40 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mdt-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - mdt_uploads:/app/uploads
+      - mdt_data:/app/data
+    restart: unless-stopped
+    networks:
+      - mdt-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mdt-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - mdt-network
+
+networks:
+  mdt-network:
+    driver: bridge
+
+volumes:
+  mdt_uploads:
+    driver: local
+  mdt_data:
+    driver: local
