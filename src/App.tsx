@@ -22,6 +22,7 @@ import DecisionFormWithEvidenceCheckboxes from "./components/decision/DecisionFo
 import DocumentUploadModal from "./components/upload/DocumentUploadModal";
 import EvidenceDrillDownModal from "./components/evidence/EvidenceDrillDownModal";
 import AuditLogDrawer from "./components/audit/AuditLogDrawer";
+import UsabilityEvaluationModal from "./components/usability/UsabilityEvaluationModal";
 
 // Immediate baseline cases so first load renders immediately without needing a browser reload
 const INITIAL_CASES: PatientCase[] = [
@@ -81,6 +82,7 @@ function MainDashboard() {
   const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isAuditDrawerOpen, setIsAuditDrawerOpen] = useState(false);
+  const [isUsabilityModalOpen, setIsUsabilityModalOpen] = useState(false);
   const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
 
   // Set document title to MDT
@@ -196,6 +198,7 @@ function MainDashboard() {
         onOpenAuditLog={() => setIsAuditDrawerOpen(true)}
         onOpenUploadModal={() => setIsUploadModalOpen(true)}
         onOpenDecisionForm={() => setIsDecisionModalOpen(true)}
+        onOpenUsabilityModal={() => setIsUsabilityModalOpen(true)}
         unreadNotificationCount={unreadNotifsCount}
       />
 
@@ -298,6 +301,12 @@ function MainDashboard() {
         isOpen={isAuditDrawerOpen}
         onClose={() => setIsAuditDrawerOpen(false)}
       />
+
+      {isUsabilityModalOpen && (
+        <UsabilityEvaluationModal
+          onClose={() => setIsUsabilityModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

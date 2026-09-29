@@ -10,6 +10,7 @@ interface HeaderProps {
   onOpenAuditLog: () => void;
   onOpenUploadModal: () => void;
   onOpenDecisionForm: () => void;
+  onOpenUsabilityModal?: () => void;
   unreadNotificationCount: number;
 }
 
@@ -21,6 +22,7 @@ export default function Header({
   onOpenAuditLog,
   onOpenUploadModal,
   onOpenDecisionForm,
+  onOpenUsabilityModal,
   unreadNotificationCount,
 }: HeaderProps) {
   const { user, logout } = useAuth();
@@ -128,6 +130,20 @@ export default function Header({
           </svg>
           <span className="hidden sm:inline text-[11px]">Audit Log</span>
         </button>
+
+        {/* Usability & SUS Evaluation Rubric Button */}
+        {onOpenUsabilityModal && (
+          <button
+            onClick={onOpenUsabilityModal}
+            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs bg-purple-500/25 hover:bg-purple-500/40 border border-purple-400/40 text-purple-200 transition-colors cursor-pointer"
+            title="Open System Usability Scale (SUS) & Clinical Validation Rubric"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2l2 4 4.5.5-3.25 3.5.75 4.5L8 12.25 4 14.5l.75-4.5L1.5 6.5 6 6l2-4z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="hidden sm:inline text-[11px] font-semibold">SUS Rubric</span>
+          </button>
+        )}
 
         {/* Binding Decision Button */}
         <button

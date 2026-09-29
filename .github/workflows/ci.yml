@@ -1,0 +1,119 @@
+name: Clinical MDT Platform CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-quality:
+    name: Frontend Quality & Build Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Production SPA Bundle Build
+        run: npm run build
+
+  backend-e2e-and-edge-cases:
+    name: Backend E2E Scan Ingestion & Timeout Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install httpx pytest jsonschema
+
+      - name: Initialize Database Schema
+        run: |
+          cd backend
+          python -c "from database import init_db; init_db()"
+          python seed_data.py
+
+      - name: Run E2E Scan Ingestion & Network Timeout Test Suite
+        run: |
+          cd backend
+          python test_e2e_scan_ingestion.py
+
+  synthetic-data-schema-validation:
+    name: Synthetic Data Generator & Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install validation dependencies
+        run: |
+          pip install pydantic jsonschema
+
+      - name: Validate Synthetic Test Cases against Pydantic & JSON Schema
+        run: |
+          python data-generation/validate_dataset.py --export-schema
+
+      - name: Upload Generated JSON Schema
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-cases-json-schema
+          path: data-generation/test_cases.schema.json
+
+  usability-and-sus-validation:
+    name: Usability Rubric & SUS Benchmark Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: pip install pydantic
+
+      - name: Execute SUS Usability Evaluation Suite
+        run: |
+          python experiment/sus_evaluation_suite.py
+
+      - name: Upload Usability Benchmark Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: usability-benchmark-report
+          path: experiment/usability_validation_report.md

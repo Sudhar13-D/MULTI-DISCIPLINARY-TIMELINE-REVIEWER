@@ -1,6 +1,9 @@
 import json
 import os
+import sys
+import argparse
 from datetime import datetime, timezone, timedelta
+from schemas import BenchmarkDatasetSchema
 
 def create_test_cases():
     now = datetime.now(timezone.utc)
@@ -415,6 +418,21 @@ def create_test_cases():
                     "report_id": "PATH-2024-BR06",
                     "full_report": "High grade IDC. Reflex IHC confirms strong 3+ circumferential membrane staining in >10% tumor cells.",
                     "visible_roles": ["pathologist", "coordinator", "clinician", "molecular", "radiologist"]
+                },
+                {
+                    "id": "ev-006-3",
+                    "timestamp": (now - timedelta(days=4)).isoformat(),
+                    "event_type": "molecular",
+                    "subtype": "her2_fish",
+                    "result_date": (now - timedelta(days=2)).isoformat(),
+                    "received_date": (now - timedelta(days=2)).isoformat(),
+                    "evidence_state": "final",
+                    "freshness_threshold_days": 60,
+                    "title": "HER2/neu Dual-Color FISH Assay",
+                    "summary": "HER2/CEP17 copy number ratio 4.2 with mean 9.6 HER2 signals/cell. Confirms ERBB2 gene amplification.",
+                    "report_id": "MOL-2024-HER06",
+                    "full_report": "Fluorescence in situ hybridization (FISH) demonstrates high-level ERBB2 (HER2) oncogene amplification.",
+                    "visible_roles": ["molecular", "pathologist", "clinician", "coordinator"]
                 }
             ],
             "specimens": [
@@ -539,6 +557,21 @@ def create_test_cases():
                     "report_id": "RAD-2024-PET08",
                     "full_report": "Stage cT2 N1 M0 HPV-positive oropharyngeal carcinoma.",
                     "visible_roles": ["radiologist", "coordinator", "clinician", "pathologist"]
+                },
+                {
+                    "id": "ev-008-3",
+                    "timestamp": (now - timedelta(days=3)).isoformat(),
+                    "event_type": "molecular",
+                    "subtype": "hpv_pcr",
+                    "result_date": (now - timedelta(days=1)).isoformat(),
+                    "received_date": (now - timedelta(days=1)).isoformat(),
+                    "evidence_state": "final",
+                    "freshness_threshold_days": 30,
+                    "title": "High-Risk HPV Real-Time PCR (Genotype 16)",
+                    "summary": "HPV Type 16 DNA detected at high copy number (>10^6 copies/ug DNA). Correlates with p16 IHC expression.",
+                    "report_id": "MOL-2024-HPV08",
+                    "full_report": "Targeted real-time PCR confirms presence of transcriptionally active high-risk HPV16 oncogenic lineage.",
+                    "visible_roles": ["molecular", "pathologist", "clinician", "coordinator"]
                 }
             ],
             "specimens": [
@@ -678,11 +711,23 @@ def create_test_cases():
         }
     ]
 
-    os.makedirs("data-generation", exist_ok=True)
-    out_path = os.path.join("data-generation", "test_cases.json")
+    # Schema validation before saving
+    print("Validating generated test cases against BenchmarkDatasetSchema...")
+    validated_dataset = BenchmarkDatasetSchema(cases=test_cases)
+    print(f"Validation successful! {len(validated_dataset.cases)} cases conform 100% to schema.")
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    out_path = os.path.join(script_dir, "test_cases.json")
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(test_cases, f, indent=2)
-    print(f"Generated {len(test_cases)} clinical benchmark test cases in {out_path}")
+    print(f"Generated and validated {len(test_cases)} clinical benchmark test cases in {out_path}")
+
+    # Export schema
+    schema_path = os.path.join(script_dir, "test_cases.schema.json")
+    with open(schema_path, "w", encoding="utf-8") as sf:
+        json.dump(BenchmarkDatasetSchema.model_json_schema(), sf, indent=2)
+    print(f"Exported JSON Schema to {schema_path}")
 
 if __name__ == "__main__":
     create_test_cases()
+

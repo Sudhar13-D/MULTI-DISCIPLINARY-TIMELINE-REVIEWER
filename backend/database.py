@@ -186,6 +186,42 @@ def init_db():
             created_at TEXT NOT NULL
         );
         """)
+
+        # 10. External Scan Ingestion Telemetry Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS external_scan_ingestions (
+            id TEXT PRIMARY KEY,
+            case_id TEXT NOT NULL,
+            series_instance_uid TEXT,
+            accession_number TEXT,
+            modality TEXT NOT NULL,
+            source_institution TEXT,
+            file_name TEXT,
+            file_size INTEGER,
+            status TEXT NOT NULL,
+            retry_count INTEGER NOT NULL DEFAULT 0,
+            elapsed_ms INTEGER,
+            error_code TEXT,
+            error_details TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+        );
+        """)
+
+        # 11. Structured Usability Evaluations & SUS Rubric Table
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usability_evaluations (
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            user_email TEXT,
+            user_role TEXT NOT NULL,
+            sus_score REAL NOT NULL,
+            sus_answers_json TEXT NOT NULL,
+            task_ratings_json TEXT,
+            qualitative_feedback TEXT,
+            created_at TEXT NOT NULL
+        );
+        """)
         
     print("Clinical MDT Database initialized successfully.")
 

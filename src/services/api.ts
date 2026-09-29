@@ -179,3 +179,48 @@ export async function fetchNotificationsApi(): Promise<NotificationItem[]> {
   if (!res.ok) return [];
   return res.json();
 }
+
+export async function ingestExternalScanApi(
+  caseId: string,
+  file?: File,
+  modality: string = "CT",
+  seriesInstanceUid?: string,
+  accessionNumber?: string,
+  institutionSource?: string
+): Promise<any> {
+  const formData = new FormData();
+  if (file) formData.append("file", file);
+  formData.append("modality", modality);
+  if (seriesInstanceUid) formData.append("series_instance_uid", seriesInstanceUid);
+  if (accessionNumber) formData.append("accession_number", accessionNumber);
+  if (institutionSource) formData.append("institution_source", institutionSource);
+
+  const res = await fetchWithAuth(`${API_BASE}/cases/${caseId}/ingest-external-scan`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Scan ingestion failed" }));
+    throw new Error(err.detail || "Scan ingestion error");
+  }
+  return res.json();
+}
+
+export async function submitUsabilityFeedbackApi(payload: {
+  sus_answers: Record<string, number>;
+  task_ratings?: Record<string, number>;
+  qualitative_feedback?: string;
+  clinical_role?: string;
+}): Promise<any> {
+  const res = await fetchWithAuth(`${API_BASE}/system/usability/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: "Feedback submission failed" }));
+    throw new Error(err.detail || "Submission error");
+  }
+  return res.json();
+}
+

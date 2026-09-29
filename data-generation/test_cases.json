@@ -20,11 +20,11 @@
     "timeline_events": [
       {
         "id": "ev-001-1",
-        "timestamp": "2026-09-07T12:49:50.815470+00:00",
+        "timestamp": "2026-09-29T11:04:09.369928+00:00",
         "event_type": "imaging",
         "subtype": "ct_chest",
-        "result_date": "2026-09-07T13:34:50.815470+00:00",
-        "received_date": "2026-09-07T13:49:50.815470+00:00",
+        "result_date": "2026-09-29T11:49:09.369928+00:00",
+        "received_date": "2026-09-29T12:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 30,
         "title": "CT Pulmonary Angiogram (PE Protocol)",
@@ -40,11 +40,11 @@
       },
       {
         "id": "ev-001-2",
-        "timestamp": "2026-03-11T14:49:50.815470+00:00",
+        "timestamp": "2026-04-02T13:04:09.369928+00:00",
         "event_type": "pathology",
         "subtype": "biopsy",
-        "result_date": "2026-03-11T14:49:50.815470+00:00",
-        "received_date": "2026-03-12T14:49:50.815470+00:00",
+        "result_date": "2026-04-02T13:04:09.369928+00:00",
+        "received_date": "2026-04-03T13:04:09.369928+00:00",
         "evidence_state": "stale",
         "freshness_threshold_days": 90,
         "title": "Historical Lung Biopsy (Right Lower Lobe)",
@@ -66,7 +66,7 @@
         "type": "Tissue Core",
         "parent_id": null,
         "status": "Archived (Benign)",
-        "collection_date": "2026-03-11T14:49:50.815470+00:00"
+        "collection_date": "2026-04-02T13:04:09.369928+00:00"
       }
     ]
   },
@@ -91,11 +91,11 @@
     "timeline_events": [
       {
         "id": "ev-002-1",
-        "timestamp": "2026-08-31T14:49:50.815470+00:00",
+        "timestamp": "2026-09-22T13:04:09.369928+00:00",
         "event_type": "pathology",
         "subtype": "biopsy",
-        "result_date": "2026-09-02T14:49:50.815470+00:00",
-        "received_date": "2026-09-02T14:49:50.815470+00:00",
+        "result_date": "2026-09-24T13:04:09.369928+00:00",
+        "received_date": "2026-09-24T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 90,
         "title": "Endoscopic Rectal Biopsy",
@@ -112,11 +112,11 @@
       },
       {
         "id": "ev-002-2",
-        "timestamp": "2026-09-03T14:49:50.815470+00:00",
+        "timestamp": "2026-09-25T13:04:09.369928+00:00",
         "event_type": "imaging",
         "subtype": "mri_pelvis",
-        "result_date": "2026-09-04T14:49:50.815470+00:00",
-        "received_date": "2026-09-04T14:49:50.815470+00:00",
+        "result_date": "2026-09-26T13:04:09.369928+00:00",
+        "received_date": "2026-09-26T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 60,
         "title": "Pelvic MRI Rectal Staging",
@@ -132,11 +132,11 @@
       },
       {
         "id": "ev-002-3",
-        "timestamp": "2026-09-05T14:49:50.815470+00:00",
+        "timestamp": "2026-09-27T13:04:09.369928+00:00",
         "event_type": "molecular",
         "subtype": "msi_mmr",
-        "result_date": "2026-09-06T14:49:50.815470+00:00",
-        "received_date": "2026-09-06T14:49:50.815470+00:00",
+        "result_date": "2026-09-28T13:04:09.369928+00:00",
+        "received_date": "2026-09-28T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 21,
         "title": "MMR Immunohistochemistry Panel",
@@ -158,7 +158,7 @@
         "type": "Endoscopic Mucosal Biopsy",
         "parent_id": null,
         "status": "Adequate (Diagnostic)",
-        "collection_date": "2026-08-31T14:49:50.815470+00:00"
+        "collection_date": "2026-09-22T13:04:09.369928+00:00"
       },
       {
         "id": "SPEC-002-B",
@@ -166,7 +166,7 @@
         "type": "Formalin-Fixed Paraffin Block",
         "parent_id": "SPEC-002-A",
         "status": "Archived for Molecular",
-        "collection_date": "2026-09-01T14:49:50.815470+00:00"
+        "collection_date": "2026-09-23T13:04:09.369928+00:00"
       },
       {
         "id": "SPEC-002-C",
@@ -174,7 +174,7 @@
         "type": "Stained Glass Slides",
         "parent_id": "SPEC-002-B",
         "status": "Verified (MSS)",
-        "collection_date": "2026-09-05T14:49:50.815470+00:00"
+        "collection_date": "2026-09-27T13:04:09.369928+00:00"
       }
     ]
   },
@@ -199,11 +199,11 @@
     "timeline_events": [
       {
         "id": "ev-003-1",
-        "timestamp": "2026-09-03T14:49:50.815470+00:00",
+        "timestamp": "2026-09-25T13:04:09.369928+00:00",
         "event_type": "imaging",
         "subtype": "ct_chest",
-        "result_date": "2026-09-03T14:49:50.815470+00:00",
-        "received_date": "2026-09-07T12:49:50.815470+00:00",
+        "result_date": "2026-09-25T13:04:09.369928+00:00",
+        "received_date": "2026-09-29T11:04:09.369928+00:00",
         "evidence_state": "received",
         "freshness_threshold_days": 30,
         "title": "External Centre CT Thorax",
@@ -218,11 +218,11 @@
       },
       {
         "id": "ev-003-2",
-        "timestamp": "2026-09-05T14:49:50.815470+00:00",
+        "timestamp": "2026-09-27T13:04:09.369928+00:00",
         "event_type": "pathology",
         "subtype": "bronchoscopy",
-        "result_date": "2026-09-05T14:49:50.815470+00:00",
-        "received_date": "2026-09-05T14:49:50.815470+00:00",
+        "result_date": "2026-09-27T13:04:09.369928+00:00",
+        "received_date": "2026-09-27T13:04:09.369928+00:00",
         "evidence_state": "preliminary",
         "freshness_threshold_days": 90,
         "title": "Bronchial Washings Cytology",
@@ -243,7 +243,7 @@
         "type": "Cytology Specimen",
         "parent_id": null,
         "status": "In Process",
-        "collection_date": "2026-09-05T14:49:50.815470+00:00"
+        "collection_date": "2026-09-27T13:04:09.369928+00:00"
       }
     ]
   },
@@ -268,11 +268,11 @@
     "timeline_events": [
       {
         "id": "ev-004-1",
-        "timestamp": "2026-08-28T14:49:50.815470+00:00",
+        "timestamp": "2026-09-19T13:04:09.369928+00:00",
         "event_type": "pathology",
         "subtype": "core_biopsy",
-        "result_date": "2026-08-30T14:49:50.815470+00:00",
-        "received_date": "2026-08-30T14:49:50.815470+00:00",
+        "result_date": "2026-09-21T13:04:09.369928+00:00",
+        "received_date": "2026-09-21T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 90,
         "title": "CT-guided Lung Core Biopsy",
@@ -289,11 +289,11 @@
       },
       {
         "id": "ev-004-2",
-        "timestamp": "2026-09-02T14:49:50.815470+00:00",
+        "timestamp": "2026-09-24T13:04:09.369928+00:00",
         "event_type": "molecular",
         "subtype": "ngs",
-        "result_date": "2026-09-02T14:49:50.815470+00:00",
-        "received_date": "2026-09-02T14:49:50.815470+00:00",
+        "result_date": "2026-09-24T13:04:09.369928+00:00",
+        "received_date": "2026-09-24T13:04:09.369928+00:00",
         "evidence_state": "superseded",
         "freshness_threshold_days": 21,
         "title": "Preliminary NGS Panel (Superseded)",
@@ -308,11 +308,11 @@
       },
       {
         "id": "ev-004-3",
-        "timestamp": "2026-09-06T14:49:50.815470+00:00",
+        "timestamp": "2026-09-28T13:04:09.369928+00:00",
         "event_type": "molecular",
         "subtype": "ngs",
-        "result_date": "2026-09-06T14:49:50.815470+00:00",
-        "received_date": "2026-09-06T14:49:50.815470+00:00",
+        "result_date": "2026-09-28T13:04:09.369928+00:00",
+        "received_date": "2026-09-28T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 21,
         "title": "Corrected Final NGS Molecular Panel",
@@ -334,7 +334,7 @@
         "type": "Core Biopsy",
         "parent_id": null,
         "status": "Adequate",
-        "collection_date": "2026-08-28T14:49:50.815470+00:00"
+        "collection_date": "2026-09-19T13:04:09.369928+00:00"
       },
       {
         "id": "SPEC-004-B",
@@ -342,7 +342,7 @@
         "type": "Purified DNA",
         "parent_id": "SPEC-004-A",
         "status": "Validated (KRAS G12C)",
-        "collection_date": "2026-09-05T14:49:50.815470+00:00"
+        "collection_date": "2026-09-27T13:04:09.369928+00:00"
       }
     ]
   },
@@ -367,11 +367,11 @@
     "timeline_events": [
       {
         "id": "ev-005-1",
-        "timestamp": "2026-06-09T14:49:50.815470+00:00",
+        "timestamp": "2026-07-01T13:04:09.369928+00:00",
         "event_type": "imaging",
         "subtype": "mri_abdomen",
-        "result_date": "2026-06-09T14:49:50.815470+00:00",
-        "received_date": "2026-06-09T14:49:50.815470+00:00",
+        "result_date": "2026-07-01T13:04:09.369928+00:00",
+        "received_date": "2026-07-01T13:04:09.369928+00:00",
         "evidence_state": "stale",
         "freshness_threshold_days": 60,
         "title": "Historical Liver MRI (90 days old)",
@@ -386,11 +386,11 @@
       },
       {
         "id": "ev-005-2",
-        "timestamp": "2026-09-07T11:49:50.815470+00:00",
+        "timestamp": "2026-09-29T10:04:09.369928+00:00",
         "event_type": "imaging",
         "subtype": "ultrasound",
-        "result_date": "2026-09-07T13:49:50.815470+00:00",
-        "received_date": "2026-09-07T13:49:50.815470+00:00",
+        "result_date": "2026-09-29T12:04:09.369928+00:00",
+        "received_date": "2026-09-29T12:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 3,
         "title": "Bedside RUQ Ultrasound",
@@ -427,11 +427,11 @@
     "timeline_events": [
       {
         "id": "ev-006-1",
-        "timestamp": "2026-08-26T14:49:50.815470+00:00",
+        "timestamp": "2026-09-17T13:04:09.369928+00:00",
         "event_type": "imaging",
         "subtype": "mammogram",
-        "result_date": "2026-08-26T14:49:50.815470+00:00",
-        "received_date": "2026-08-26T14:49:50.815470+00:00",
+        "result_date": "2026-09-17T13:04:09.369928+00:00",
+        "received_date": "2026-09-17T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 30,
         "title": "Digital Bilateral Mammogram",
@@ -447,11 +447,11 @@
       },
       {
         "id": "ev-006-2",
-        "timestamp": "2026-09-01T14:49:50.815470+00:00",
+        "timestamp": "2026-09-23T13:04:09.369928+00:00",
         "event_type": "pathology",
         "subtype": "core_biopsy",
-        "result_date": "2026-09-02T14:49:50.815470+00:00",
-        "received_date": "2026-09-02T14:49:50.815470+00:00",
+        "result_date": "2026-09-24T13:04:09.369928+00:00",
+        "received_date": "2026-09-24T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 90,
         "title": "Left Breast Core Biopsy",
@@ -465,6 +465,26 @@
           "molecular",
           "radiologist"
         ]
+      },
+      {
+        "id": "ev-006-3",
+        "timestamp": "2026-09-25T13:04:09.369928+00:00",
+        "event_type": "molecular",
+        "subtype": "her2_fish",
+        "result_date": "2026-09-27T13:04:09.369928+00:00",
+        "received_date": "2026-09-27T13:04:09.369928+00:00",
+        "evidence_state": "final",
+        "freshness_threshold_days": 60,
+        "title": "HER2/neu Dual-Color FISH Assay",
+        "summary": "HER2/CEP17 copy number ratio 4.2 with mean 9.6 HER2 signals/cell. Confirms ERBB2 gene amplification.",
+        "report_id": "MOL-2024-HER06",
+        "full_report": "Fluorescence in situ hybridization (FISH) demonstrates high-level ERBB2 (HER2) oncogene amplification.",
+        "visible_roles": [
+          "molecular",
+          "pathologist",
+          "clinician",
+          "coordinator"
+        ]
       }
     ],
     "specimens": [
@@ -474,7 +494,7 @@
         "type": "Core Needle Biopsy",
         "parent_id": null,
         "status": "Adequate",
-        "collection_date": "2026-09-01T14:49:50.815470+00:00"
+        "collection_date": "2026-09-23T13:04:09.369928+00:00"
       }
     ]
   },
@@ -499,11 +519,11 @@
     "timeline_events": [
       {
         "id": "ev-007-1",
-        "timestamp": "2026-08-24T14:49:50.815470+00:00",
+        "timestamp": "2026-09-15T13:04:09.369928+00:00",
         "event_type": "imaging",
         "subtype": "mri_prostate",
-        "result_date": "2026-08-25T14:49:50.815470+00:00",
-        "received_date": "2026-08-25T14:49:50.815470+00:00",
+        "result_date": "2026-09-16T13:04:09.369928+00:00",
+        "received_date": "2026-09-16T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 60,
         "title": "Multiparametric Prostate MRI",
@@ -519,11 +539,11 @@
       },
       {
         "id": "ev-007-2",
-        "timestamp": "2026-08-31T14:49:50.815470+00:00",
+        "timestamp": "2026-09-22T13:04:09.369928+00:00",
         "event_type": "pathology",
         "subtype": "prostate_biopsy",
-        "result_date": "2026-09-02T14:49:50.815470+00:00",
-        "received_date": "2026-09-02T14:49:50.815470+00:00",
+        "result_date": "2026-09-24T13:04:09.369928+00:00",
+        "received_date": "2026-09-24T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 90,
         "title": "Targeted MRI-US Fusion Biopsy",
@@ -545,7 +565,7 @@
         "type": "Needle Biopsies",
         "parent_id": null,
         "status": "Diagnostic",
-        "collection_date": "2026-08-31T14:49:50.815470+00:00"
+        "collection_date": "2026-09-22T13:04:09.369928+00:00"
       }
     ]
   },
@@ -570,11 +590,11 @@
     "timeline_events": [
       {
         "id": "ev-008-1",
-        "timestamp": "2026-08-28T14:49:50.815470+00:00",
+        "timestamp": "2026-09-19T13:04:09.369928+00:00",
         "event_type": "pathology",
         "subtype": "tonsil_biopsy",
-        "result_date": "2026-08-30T14:49:50.815470+00:00",
-        "received_date": "2026-08-30T14:49:50.815470+00:00",
+        "result_date": "2026-09-21T13:04:09.369928+00:00",
+        "received_date": "2026-09-21T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 90,
         "title": "Left Tonsil Excisional Biopsy",
@@ -591,11 +611,11 @@
       },
       {
         "id": "ev-008-2",
-        "timestamp": "2026-09-02T14:49:50.815470+00:00",
+        "timestamp": "2026-09-24T13:04:09.369928+00:00",
         "event_type": "imaging",
         "subtype": "pet_ct",
-        "result_date": "2026-09-03T14:49:50.815470+00:00",
-        "received_date": "2026-09-03T14:49:50.815470+00:00",
+        "result_date": "2026-09-25T13:04:09.369928+00:00",
+        "received_date": "2026-09-25T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 30,
         "title": "FDG PET/CT Whole Body Staging",
@@ -608,6 +628,26 @@
           "clinician",
           "pathologist"
         ]
+      },
+      {
+        "id": "ev-008-3",
+        "timestamp": "2026-09-26T13:04:09.369928+00:00",
+        "event_type": "molecular",
+        "subtype": "hpv_pcr",
+        "result_date": "2026-09-28T13:04:09.369928+00:00",
+        "received_date": "2026-09-28T13:04:09.369928+00:00",
+        "evidence_state": "final",
+        "freshness_threshold_days": 30,
+        "title": "High-Risk HPV Real-Time PCR (Genotype 16)",
+        "summary": "HPV Type 16 DNA detected at high copy number (>10^6 copies/ug DNA). Correlates with p16 IHC expression.",
+        "report_id": "MOL-2024-HPV08",
+        "full_report": "Targeted real-time PCR confirms presence of transcriptionally active high-risk HPV16 oncogenic lineage.",
+        "visible_roles": [
+          "molecular",
+          "pathologist",
+          "clinician",
+          "coordinator"
+        ]
       }
     ],
     "specimens": [
@@ -617,7 +657,7 @@
         "type": "Excision Biopsy",
         "parent_id": null,
         "status": "Confirmed p16+",
-        "collection_date": "2026-08-28T14:49:50.815470+00:00"
+        "collection_date": "2026-09-19T13:04:09.369928+00:00"
       }
     ]
   },
@@ -642,11 +682,11 @@
     "timeline_events": [
       {
         "id": "ev-009-1",
-        "timestamp": "2026-08-23T14:49:50.815470+00:00",
+        "timestamp": "2026-09-14T13:04:09.369928+00:00",
         "event_type": "imaging",
         "subtype": "ct_pelvis",
-        "result_date": "2026-08-24T14:49:50.815470+00:00",
-        "received_date": "2026-08-24T14:49:50.815470+00:00",
+        "result_date": "2026-09-15T13:04:09.369928+00:00",
+        "received_date": "2026-09-15T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 30,
         "title": "CT Abdomen and Pelvis with Contrast",
@@ -662,11 +702,11 @@
       },
       {
         "id": "ev-009-2",
-        "timestamp": "2026-08-30T14:49:50.815470+00:00",
+        "timestamp": "2026-09-21T13:04:09.369928+00:00",
         "event_type": "molecular",
         "subtype": "germline_brca",
-        "result_date": "2026-09-03T14:49:50.815470+00:00",
-        "received_date": "2026-09-03T14:49:50.815470+00:00",
+        "result_date": "2026-09-25T13:04:09.369928+00:00",
+        "received_date": "2026-09-25T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 60,
         "title": "Germline BRCA1/2 Panel",
@@ -688,7 +728,7 @@
         "type": "Body Fluid Cytology",
         "parent_id": null,
         "status": "Diagnostic",
-        "collection_date": "2026-08-27T14:49:50.815470+00:00"
+        "collection_date": "2026-09-18T13:04:09.369928+00:00"
       }
     ]
   },
@@ -713,11 +753,11 @@
     "timeline_events": [
       {
         "id": "ev-010-1",
-        "timestamp": "2026-08-22T14:49:50.815470+00:00",
+        "timestamp": "2026-09-13T13:04:09.369928+00:00",
         "event_type": "pathology",
         "subtype": "skin_excision",
-        "result_date": "2026-08-24T14:49:50.815470+00:00",
-        "received_date": "2026-08-24T14:49:50.815470+00:00",
+        "result_date": "2026-09-15T13:04:09.369928+00:00",
+        "received_date": "2026-09-15T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 90,
         "title": "Wide Local Excision Left Calf",
@@ -734,11 +774,11 @@
       },
       {
         "id": "ev-010-2",
-        "timestamp": "2026-09-01T14:49:50.815470+00:00",
+        "timestamp": "2026-09-23T13:04:09.369928+00:00",
         "event_type": "molecular",
         "subtype": "braf_pcr",
-        "result_date": "2026-09-04T14:49:50.815470+00:00",
-        "received_date": "2026-09-04T14:49:50.815470+00:00",
+        "result_date": "2026-09-26T13:04:09.369928+00:00",
+        "received_date": "2026-09-26T13:04:09.369928+00:00",
         "evidence_state": "final",
         "freshness_threshold_days": 21,
         "title": "BRAF V600 Mutation Real-Time PCR",
@@ -760,7 +800,7 @@
         "type": "Surgical Specimen",
         "parent_id": null,
         "status": "Diagnostic",
-        "collection_date": "2026-08-22T14:49:50.815470+00:00"
+        "collection_date": "2026-09-13T13:04:09.369928+00:00"
       }
     ]
   }

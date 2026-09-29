@@ -1,0 +1,405 @@
+{
+  "$defs": {
+    "ComplexityLevel": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "ComplexityLevel",
+      "type": "string"
+    },
+    "EventType": {
+      "enum": [
+        "imaging",
+        "pathology",
+        "molecular",
+        "clinical_notes",
+        "review",
+        "external_document"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "EvidenceState": {
+      "enum": [
+        "ordered",
+        "received",
+        "preliminary",
+        "final",
+        "stale",
+        "missing",
+        "unavailable",
+        "superseded"
+      ],
+      "title": "EvidenceState",
+      "type": "string"
+    },
+    "SpecimenSchema": {
+      "properties": {
+        "id": {
+          "description": "Unique specimen accession ID (e.g. SPEC-001-A)",
+          "minLength": 3,
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "description": "Human-readable specimen label",
+          "minLength": 2,
+          "title": "Label",
+          "type": "string"
+        },
+        "type": {
+          "description": "Specimen nature (e.g. Tissue Core, Reserve Block, DNA Extract)",
+          "title": "Type",
+          "type": "string"
+        },
+        "parent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Parent specimen in chain-of-custody hierarchy",
+          "title": "Parent Id"
+        },
+        "status": {
+          "description": "Current laboratory status (e.g. Diagnostic, Archived, Exhausted)",
+          "title": "Status",
+          "type": "string"
+        },
+        "collection_date": {
+          "description": "ISO 8601 collection timestamp",
+          "title": "Collection Date",
+          "type": "string"
+        },
+        "anatomic_site": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "SNOMED CT anatomical origin",
+          "title": "Anatomic Site"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Block section count or chain-of-custody remarks",
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "type",
+        "status",
+        "collection_date"
+      ],
+      "title": "SpecimenSchema",
+      "type": "object"
+    },
+    "TestCaseSchema": {
+      "properties": {
+        "case_id": {
+          "description": "3-digit case code (e.g. '001')",
+          "title": "Case Id",
+          "type": "string"
+        },
+        "patient_de_id": {
+          "description": "HIPAA Safe Harbor pseudonym (e.g. Patient_A_68M)",
+          "pattern": "^Patient_[A-Z]_\\d{1,3}[MF]$",
+          "title": "Patient De Id",
+          "type": "string"
+        },
+        "age": {
+          "description": "Patient age at MDT review",
+          "maximum": 120,
+          "minimum": 0,
+          "title": "Age",
+          "type": "integer"
+        },
+        "sex": {
+          "description": "Biological sex (M/F)",
+          "pattern": "^[MF]$",
+          "title": "Sex",
+          "type": "string"
+        },
+        "primary_dx": {
+          "description": "Primary oncologic or surgical diagnosis",
+          "minLength": 5,
+          "title": "Primary Dx",
+          "type": "string"
+        },
+        "referring_dept": {
+          "description": "Referring clinical department",
+          "minLength": 3,
+          "title": "Referring Dept",
+          "type": "string"
+        },
+        "urgency": {
+          "$ref": "#/$defs/UrgencyLevel",
+          "description": "Clinical triage urgency"
+        },
+        "decision_required_by_hours": {
+          "description": "Decision SLA in hours (e.g. 2 for STAT, 168 for routine)",
+          "exclusiveMinimum": 0,
+          "title": "Decision Required By Hours",
+          "type": "integer"
+        },
+        "complexity": {
+          "$ref": "#/$defs/ComplexityLevel",
+          "description": "Clinical and multidisciplinary complexity tier"
+        },
+        "has_external_imaging": {
+          "default": false,
+          "title": "Has External Imaging",
+          "type": "boolean"
+        },
+        "has_missing_pathology": {
+          "default": false,
+          "title": "Has Missing Pathology",
+          "type": "boolean"
+        },
+        "has_molecular_result": {
+          "default": false,
+          "title": "Has Molecular Result",
+          "type": "boolean"
+        },
+        "has_stale_evidence": {
+          "default": false,
+          "title": "Has Stale Evidence",
+          "type": "boolean"
+        },
+        "has_missing_evidence": {
+          "default": false,
+          "title": "Has Missing Evidence",
+          "type": "boolean"
+        },
+        "expected_decision_time_minutes": {
+          "exclusiveMinimum": 0,
+          "title": "Expected Decision Time Minutes",
+          "type": "integer"
+        },
+        "baseline_minutes": {
+          "description": "Legacy paper-based assembly time (minutes)",
+          "exclusiveMinimum": 0,
+          "title": "Baseline Minutes",
+          "type": "integer"
+        },
+        "target_minutes": {
+          "description": "Target digital MDT review time (minutes)",
+          "exclusiveMinimum": 0,
+          "title": "Target Minutes",
+          "type": "integer"
+        },
+        "timeline_events": {
+          "items": {
+            "$ref": "#/$defs/TimelineEventSchema"
+          },
+          "title": "Timeline Events",
+          "type": "array"
+        },
+        "specimens": {
+          "items": {
+            "$ref": "#/$defs/SpecimenSchema"
+          },
+          "title": "Specimens",
+          "type": "array"
+        }
+      },
+      "required": [
+        "case_id",
+        "patient_de_id",
+        "age",
+        "sex",
+        "primary_dx",
+        "referring_dept",
+        "urgency",
+        "decision_required_by_hours",
+        "complexity",
+        "expected_decision_time_minutes",
+        "baseline_minutes",
+        "target_minutes"
+      ],
+      "title": "TestCaseSchema",
+      "type": "object"
+    },
+    "TimelineEventSchema": {
+      "properties": {
+        "id": {
+          "description": "Unique event identifier (e.g. ev-001-1)",
+          "title": "Id",
+          "type": "string"
+        },
+        "timestamp": {
+          "description": "ISO 8601 creation or encounter timestamp",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "event_type": {
+          "$ref": "#/$defs/EventType",
+          "description": "High-level category (imaging, pathology, molecular)"
+        },
+        "subtype": {
+          "description": "Specific diagnostic modality or assay (e.g. ct_chest, biopsy, ngs_panel)",
+          "title": "Subtype",
+          "type": "string"
+        },
+        "specimen_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "FK to parent specimen hierarchy if applicable",
+          "title": "Specimen Id"
+        },
+        "result_date": {
+          "description": "ISO 8601 date when study/assay was completed",
+          "title": "Result Date",
+          "type": "string"
+        },
+        "received_date": {
+          "description": "ISO 8601 date when study/report was ingested",
+          "title": "Received Date",
+          "type": "string"
+        },
+        "evidence_state": {
+          "$ref": "#/$defs/EvidenceState",
+          "description": "Clinical state machine state"
+        },
+        "is_preliminary": {
+          "default": false,
+          "description": "True if report requires consultant sign-off",
+          "title": "Is Preliminary",
+          "type": "boolean"
+        },
+        "is_final": {
+          "default": true,
+          "description": "True if definitive authorized report",
+          "title": "Is Final",
+          "type": "boolean"
+        },
+        "freshness_threshold_days": {
+          "description": "Category-specific SLA freshness limit in days",
+          "maximum": 365,
+          "minimum": 1,
+          "title": "Freshness Threshold Days",
+          "type": "integer"
+        },
+        "is_stale": {
+          "default": false,
+          "description": "True if age exceeds freshness threshold",
+          "title": "Is Stale",
+          "type": "boolean"
+        },
+        "title": {
+          "description": "Descriptive diagnostic title",
+          "minLength": 3,
+          "title": "Title",
+          "type": "string"
+        },
+        "summary": {
+          "description": "Structured clinical findings summary",
+          "minLength": 5,
+          "title": "Summary",
+          "type": "string"
+        },
+        "report_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "External accession or LIS/RIS report number",
+          "title": "Report Id"
+        },
+        "full_report": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Unabridged medical narrative",
+          "title": "Full Report"
+        },
+        "visible_roles": {
+          "description": "Roles authorized to view this event",
+          "items": {
+            "type": "string"
+          },
+          "title": "Visible Roles",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "timestamp",
+        "event_type",
+        "subtype",
+        "result_date",
+        "received_date",
+        "evidence_state",
+        "freshness_threshold_days",
+        "title",
+        "summary"
+      ],
+      "title": "TimelineEventSchema",
+      "type": "object"
+    },
+    "UrgencyLevel": {
+      "enum": [
+        "urgent",
+        "routine",
+        "expedited",
+        "elective"
+      ],
+      "title": "UrgencyLevel",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "cases": {
+      "description": "List of benchmark clinical test cases",
+      "items": {
+        "$ref": "#/$defs/TestCaseSchema"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "cases"
+  ],
+  "title": "BenchmarkDatasetSchema",
+  "type": "object"
+}

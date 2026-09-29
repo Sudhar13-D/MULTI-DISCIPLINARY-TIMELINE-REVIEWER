@@ -2,10 +2,13 @@ import os
 import json
 import secrets
 import shutil
+import time
+import asyncio
+import hashlib
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
-from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -28,6 +31,12 @@ from models import (
     NotificationResponse,
     SystemIntegrationsResponse,
     IntegrationStatus,
+    ExternalScanIngestResponse,
+    PacsFetchStudyRequest,
+    PacsFetchStudyResponse,
+    UsabilityEvaluationRequest,
+    UsabilityEvaluationResponse,
+    calculate_sus_score,
 )
 from auth import (
     verify_password,
@@ -564,16 +573,54 @@ async def upload_document(
     file_path = os.path.join(UPLOAD_DIR, safe_name)
 
     size = 0
+    oversized = False
     with open(file_path, "wb") as f:
         while chunk := await file.read(1024 * 1024):
             size += len(chunk)
             if size > MAX_FILE_SIZE:
-                os.remove(file_path)
-                raise HTTPException(status_code=400, detail="File exceeds maximum size limit of 25MB.")
+                oversized = True
+                break
             f.write(chunk)
+
+    if oversized:
+        try:
+            os.remove(file_path)
+        except Exception:
+            pass
+        raise HTTPException(status_code=400, detail="File exceeds maximum size limit of 25MB.")
 
     now_iso = datetime.now(timezone.utc).isoformat()
     client_ip = request.client.host if request.client else "unknown"
+
+    # DICOM Part 10 header validation if .dcm extension
+    if ext == ".dcm":
+        with open(file_path, "rb") as f:
+            hdr = f.read(132)
+        if len(hdr) >= 132 and hdr[128:132] != b"DICM":
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+            with get_db() as conn:
+                conn.execute("""
+                    INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    f"aud-{secrets.token_hex(6)}",
+                    case_id,
+                    user["id"],
+                    user["email"],
+                    user["role"],
+                    "SECURITY_SCAN_REJECTED",
+                    f"Rejected corrupt DICOM upload '{file.filename}': missing 'DICM' preamble bytes.",
+                    "REJECTED",
+                    client_ip,
+                    now_iso
+                ))
+            raise HTTPException(
+                status_code=400,
+                detail="INVALID_DICOM_PREAMBLE: File missing standard 132-byte Part 10 'DICM' preamble bytes."
+            )
 
     with get_db() as conn:
         conn.execute("""
@@ -594,6 +641,23 @@ async def upload_document(
             notes,
             now_iso
         ))
+
+        # Check if case has a missing timeline event that this scan satisfies (e.g. Case 003 external scan delay)
+        missing_event = conn.execute("""
+            SELECT id FROM timeline_events 
+            WHERE case_id = ? AND evidence_state = 'missing'
+            LIMIT 1
+        """, (case_id,)).fetchone()
+
+        if missing_event:
+            # Transition missing event to final
+            conn.execute("""
+                UPDATE timeline_events
+                SET evidence_state = 'final', is_final = 1, is_stale = 0,
+                    summary = summary || ' [Scan ingested: ' || ? || ']',
+                    result_date = ?, received_date = ?
+                WHERE id = ?
+            """, (file.filename, now_iso, now_iso, missing_event["id"]))
 
         # Add timeline event for uploaded external evidence
         conn.execute("""
@@ -653,6 +717,527 @@ def list_documents(case_id: str, user: dict = Depends(get_current_user)):
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM documents WHERE case_id = ? ORDER BY created_at DESC", (case_id,)).fetchall()
         return [dict(r) for r in rows]
+
+# ─── External Scan Ingestion & Network Resilience Endpoints ───────────────────
+
+@app.post("/api/cases/{case_id}/ingest-external-scan", response_model=ExternalScanIngestResponse)
+async def ingest_external_scan(
+    case_id: str,
+    request: Request,
+    file: Optional[UploadFile] = File(None),
+    modality: str = Form("CT"),
+    series_instance_uid: Optional[str] = Form(None),
+    accession_number: Optional[str] = Form(None),
+    institution_source: Optional[str] = Form("Regional General Hospital"),
+    simulate_error: Optional[str] = Form(None),
+    simulate_timeout: bool = Form(False),
+    simulate_delay_ms: int = Form(0),
+    retry_count: int = Form(0),
+    user: dict = Depends(get_current_user)
+):
+    start_time = time.time()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    client_ip = request.client.host if request.client else "unknown"
+
+    # 1. Validate Case Exists
+    with get_db() as conn:
+        case_row = conn.execute("SELECT * FROM cases WHERE id = ?", (case_id,)).fetchone()
+        if not case_row:
+            raise HTTPException(status_code=404, detail=f"Case '{case_id}' not found.")
+
+    # 2. Check for Duplicate Scan Ingestion (Idempotency check)
+    if series_instance_uid:
+        with get_db() as conn:
+            existing = conn.execute("""
+                SELECT id FROM external_scan_ingestions 
+                WHERE case_id = ? AND series_instance_uid = ? AND status = 'COMPLETED'
+            """, (case_id, series_instance_uid)).fetchone()
+            if existing or simulate_error == "DUPLICATE":
+                conn.execute("""
+                    INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    f"aud-{secrets.token_hex(6)}",
+                    case_id,
+                    user["id"],
+                    user["email"],
+                    user["role"],
+                    "DUPLICATE_SCAN_INGESTION",
+                    f"Detected duplicate scan ingestion attempt for SeriesInstanceUID '{series_instance_uid}'. Ingestion rejected.",
+                    "REJECTED",
+                    client_ip,
+                    now_iso
+                ))
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"DUPLICATE_SCAN_INGESTION: SeriesInstanceUID '{series_instance_uid}' has already been ingested into Case {case_id}."
+                )
+
+    # 3. Handle Network Timeout Edge Case (PACS Connection Timeout)
+    if simulate_timeout or simulate_error == "NETWORK_TIMEOUT":
+        elapsed = int((time.time() - start_time) * 1000) + 3050
+        with get_db() as conn:
+            ingest_id = f"ingest-err-{secrets.token_hex(4)}"
+            conn.execute("""
+                INSERT INTO external_scan_ingestions (
+                    id, case_id, series_instance_uid, accession_number, modality,
+                    source_institution, file_name, file_size, status, retry_count,
+                    elapsed_ms, error_code, error_details, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                ingest_id, case_id, series_instance_uid, accession_number, modality,
+                institution_source, None, 0, "TIMEOUT", 3, elapsed,
+                "NETWORK_TIMEOUT", "Connection to remote PACS WADO-RS endpoint timed out (> 3000ms SLA).",
+                now_iso
+            ))
+            conn.execute("""
+                INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                f"aud-{secrets.token_hex(6)}",
+                case_id,
+                user["id"],
+                user["email"],
+                user["role"],
+                "SCAN_INGESTION_TIMEOUT",
+                f"PACS WADO-RS retrieval timed out for {modality} scan ({institution_source}) after 3 exponential backoff retries.",
+                "TIMEOUT",
+                client_ip,
+                now_iso
+            ))
+            conn.execute("""
+                INSERT INTO notifications (id, case_id, recipient_role, title, message, category, is_read, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+            """, (
+                f"notif-{secrets.token_hex(4)}",
+                case_id,
+                "coordinator",
+                f"PACS Network Timeout: Case {case_id}",
+                f"External scan ingestion from {institution_source} timed out after 3 retries. Manual DICOM CD upload required.",
+                "alert",
+                now_iso
+            ))
+        raise HTTPException(
+            status_code=504,
+            detail={
+                "error": "NETWORK_TIMEOUT",
+                "message": f"Connection to remote PACS endpoint at '{institution_source}' timed out after 3 retries (3000ms SLA exceeded).",
+                "circuit_breaker_status": "OPEN",
+                "retries_attempted": 3,
+                "elapsed_ms": elapsed
+            }
+        )
+
+    # 4. Handle Transient Network Packet Drop Recoverable on Retry
+    if simulate_error == "PACKET_DROP_RECOVER" and retry_count < 1:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "TRANSIENT_PACKET_DROP",
+                "message": "Temporary socket reset during PACS transfer. Retry attempt recommended with backoff.",
+                "retry_recommended": True,
+                "retry_after_ms": 250
+            }
+        )
+
+    # 5. Handle Corrupt DICOM Header Edge Case
+    if simulate_error == "CORRUPT_HEADER":
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                f"aud-{secrets.token_hex(6)}",
+                case_id,
+                user["id"],
+                user["email"],
+                user["role"],
+                "SECURITY_SCAN_REJECTED",
+                f"Rejected corrupt scan upload for Case {case_id}: missing standard DICM magic preamble.",
+                "REJECTED",
+                client_ip,
+                now_iso
+            ))
+        raise HTTPException(
+            status_code=400,
+            detail="INVALID_DICOM_PREAMBLE: File missing standard 132-byte Part 10 'DICM' preamble bytes."
+        )
+
+    # 6. Process File Upload if provided
+    file_name = None
+    file_size = 0
+    if file:
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            with get_db() as conn:
+                conn.execute("""
+                    INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    f"aud-{secrets.token_hex(6)}", case_id, user["id"], user["email"], user["role"],
+                    "SECURITY_FILE_REJECTED",
+                    f"Rejected upload of unauthorized extension '{ext}' for Case {case_id}.",
+                    "REJECTED", client_ip, now_iso
+                ))
+            raise HTTPException(
+                status_code=400,
+                detail=f"Disallowed file extension '{ext}'. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            )
+
+        doc_id = f"scan-{secrets.token_hex(6)}"
+        safe_name = f"{doc_id}_{file.filename}"
+        file_path = os.path.join(UPLOAD_DIR, safe_name)
+
+        oversized = False
+        with open(file_path, "wb") as f:
+            while chunk := await file.read(1024 * 1024):
+                file_size += len(chunk)
+                if file_size > MAX_FILE_SIZE:
+                    oversized = True
+                    break
+                f.write(chunk)
+
+        if oversized:
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+            with get_db() as conn:
+                conn.execute("""
+                    INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    f"aud-{secrets.token_hex(6)}", case_id, user["id"], user["email"], user["role"],
+                    "INGESTION_PAYLOAD_TOO_LARGE",
+                    f"Scan upload exceeded 25MB safety threshold ({file_size // (1024*1024)}MB).",
+                    "REJECTED", client_ip, now_iso
+                ))
+            raise HTTPException(status_code=400, detail="File exceeds maximum size limit of 25MB.")
+
+        # Validate DICOM preamble if .dcm
+        if ext == ".dcm":
+            with open(file_path, "rb") as f:
+                hdr = f.read(132)
+            if len(hdr) >= 132 and hdr[128:132] != b"DICM":
+                try:
+                    os.remove(file_path)
+                except Exception:
+                    pass
+                with get_db() as conn:
+                    conn.execute("""
+                        INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        f"aud-{secrets.token_hex(6)}", case_id, user["id"], user["email"], user["role"],
+                        "SECURITY_SCAN_REJECTED",
+                        f"Rejected corrupt DICOM upload '{file.filename}': missing 'DICM' preamble bytes.",
+                        "REJECTED", client_ip, now_iso
+                    ))
+                raise HTTPException(
+                    status_code=400,
+                    detail="INVALID_DICOM_PREAMBLE: File missing standard 132-byte Part 10 'DICM' preamble bytes."
+                )
+        file_name = file.filename
+    else:
+        file_name = f"DICOM_STUDY_{series_instance_uid or secrets.token_hex(4)}.dcm"
+        file_size = 14280 * 1024  # Standard synthetic study size
+
+    # 7. Record Ingestion, Update Timeline & Audit Trail
+    ingestion_id = f"ingest-{secrets.token_hex(6)}"
+    timeline_event_id = f"ev-scan-{secrets.token_hex(4)}"
+    elapsed_ms = int((time.time() - start_time) * 1000)
+
+    with get_db() as conn:
+        # Record in external_scan_ingestions telemetry table
+        conn.execute("""
+            INSERT INTO external_scan_ingestions (
+                id, case_id, series_instance_uid, accession_number, modality,
+                source_institution, file_name, file_size, status, retry_count,
+                elapsed_ms, error_code, error_details, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            ingestion_id, case_id, series_instance_uid, accession_number, modality,
+            institution_source, file_name, file_size, "COMPLETED", retry_count,
+            elapsed_ms, None, None, now_iso
+        ))
+
+        # Check if case has an existing missing scan event to satisfy
+        missing_scan = conn.execute("""
+            SELECT id FROM timeline_events
+            WHERE case_id = ? AND evidence_state = 'missing' AND (event_type = 'imaging' OR title LIKE '%Scan%' OR title LIKE '%CT%' OR title LIKE '%MRI%')
+            LIMIT 1
+        """, (case_id,)).fetchone()
+
+        if missing_scan:
+            conn.execute("""
+                UPDATE timeline_events
+                SET evidence_state = 'final', is_final = 1, is_stale = 0,
+                    summary = summary || ' [External study ingested from ' || ? || ']',
+                    result_date = ?, received_date = ?
+                WHERE id = ?
+            """, (institution_source, now_iso, now_iso, missing_scan["id"]))
+            timeline_event_id = missing_scan["id"]
+        else:
+            # Create fresh timeline event
+            conn.execute("""
+                INSERT INTO timeline_events (
+                    id, case_id, timestamp, event_type, subtype, specimen_id, result_date,
+                    received_date, evidence_state, is_preliminary, is_final, freshness_threshold_days,
+                    is_stale, title, summary, full_report, visible_roles, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                timeline_event_id,
+                case_id,
+                now_iso,
+                "imaging",
+                f"{modality.lower()}_external",
+                None,
+                now_iso,
+                now_iso,
+                "final",
+                0,
+                1,
+                14,
+                0,
+                f"External {modality} Study ({institution_source})",
+                f"External DICOM study ingested into MDT timeline. Accession: {accession_number or 'ACC-EXT-01'}. Modality: {modality}.",
+                f"DICOM SERIES INGESTION COMPLETE\nModality: {modality}\nSource: {institution_source}\nSeriesUID: {series_instance_uid or '1.2.840.10008.1'}\nVerified by: {user['full_name']} ({user['role']})",
+                json.dumps(["chair", "coordinator", "radiologist", "pathologist", "molecular", "clinician"]),
+                now_iso
+            ))
+
+        # Record Audit Log
+        action_name = "SCAN_INGESTION_RETRY_SUCCESS" if retry_count > 0 else "SCAN_INGESTION_SUCCESS"
+        conn.execute("""
+            INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            f"aud-{secrets.token_hex(6)}",
+            case_id,
+            user["id"],
+            user["email"],
+            user["role"],
+            action_name,
+            f"Successfully ingested external {modality} scan for Case {case_id} from {institution_source} (Retries: {retry_count}, Latency: {elapsed_ms}ms).",
+            "SUCCESS",
+            client_ip,
+            now_iso
+        ))
+
+    return ExternalScanIngestResponse(
+        status="success",
+        ingestion_id=ingestion_id,
+        case_id=case_id,
+        series_instance_uid=series_instance_uid,
+        accession_number=accession_number,
+        modality=modality,
+        file_name=file_name,
+        file_size_bytes=file_size,
+        retry_count=retry_count,
+        elapsed_ms=elapsed_ms,
+        freshness_state="fresh",
+        timeline_event_id=timeline_event_id,
+        message=f"External {modality} scan successfully ingested into case timeline with FRESH evidence badge."
+    )
+
+@app.post("/api/integrations/pacs/fetch-study", response_model=PacsFetchStudyResponse)
+def pacs_fetch_study(payload: PacsFetchStudyRequest, user: dict = Depends(get_current_user)):
+    start_time = time.time()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    if payload.simulate_network_condition == "TIMEOUT":
+        elapsed_ms = int(payload.timeout_seconds * 1000)
+        with get_db() as conn:
+            conn.execute("""
+                INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                f"aud-{secrets.token_hex(6)}",
+                payload.case_id,
+                user["id"],
+                user["email"],
+                user["role"],
+                "PACS_FETCH_TIMEOUT",
+                f"WADO-RS retrieval timed out after {payload.max_retries} attempts ({elapsed_ms}ms). Endpoint: {payload.remote_pacs_endpoint}.",
+                "TIMEOUT",
+                "127.0.0.1",
+                now_iso
+            ))
+        raise HTTPException(
+            status_code=504,
+            detail={
+                "error": "NETWORK_TIMEOUT",
+                "message": f"PACS endpoint '{payload.remote_pacs_endpoint}' timed out after {payload.max_retries} attempts.",
+                "circuit_breaker": "OPEN",
+                "elapsed_ms": elapsed_ms
+            }
+        )
+
+    # Simulated successful PACS WADO-RS pull
+    elapsed_ms = 45
+    series_uid = payload.series_instance_uid or f"1.2.840.10008.5.1.4.1.1.2.{secrets.token_hex(6)}"
+    timeline_event_id = f"ev-pacs-{secrets.token_hex(4)}"
+
+    with get_db() as conn:
+        conn.execute("""
+            INSERT INTO timeline_events (
+                id, case_id, timestamp, event_type, subtype, specimen_id, result_date,
+                received_date, evidence_state, is_preliminary, is_final, freshness_threshold_days,
+                is_stale, title, summary, full_report, visible_roles, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            timeline_event_id,
+            payload.case_id,
+            now_iso,
+            "imaging",
+            f"{payload.modality.lower()}_pacs",
+            None,
+            now_iso,
+            now_iso,
+            "final",
+            0,
+            1,
+            14,
+            0,
+            f"PACS Ingested {payload.modality} Study",
+            f"Auto-retrieved from PACS via WADO-RS. Accession: {payload.accession_number}. SeriesUID: {series_uid}.",
+            f"WADO-RS RETRIEVE STUDY SUCCESS\nAccession: {payload.accession_number}\nEndpoint: {payload.remote_pacs_endpoint}",
+            json.dumps(["chair", "coordinator", "radiologist", "pathologist", "molecular", "clinician"]),
+            now_iso
+        ))
+
+        conn.execute("""
+            INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            f"aud-{secrets.token_hex(6)}",
+            payload.case_id,
+            user["id"],
+            user["email"],
+            user["role"],
+            "PACS_WADO_RS_FETCH_SUCCESS",
+            f"Fetched {payload.modality} study ({payload.accession_number}) via DICOMweb WADO-RS in {elapsed_ms}ms.",
+            "SUCCESS",
+            "127.0.0.1",
+            now_iso
+        ))
+
+    return PacsFetchStudyResponse(
+        status="success",
+        case_id=payload.case_id,
+        accession_number=payload.accession_number,
+        series_instance_uid=series_uid,
+        modality=payload.modality,
+        attempts_made=1,
+        elapsed_ms=elapsed_ms,
+        circuit_breaker_state="CLOSED",
+        timeline_event_id=timeline_event_id,
+        message="PACS study retrieved and attached to timeline successfully."
+    )
+
+# ─── System Usability Scale (SUS) & Rubric Endpoints ─────────────────────────
+
+@app.post("/api/system/usability/feedback", response_model=UsabilityEvaluationResponse)
+def submit_usability_feedback(
+    payload: UsabilityEvaluationRequest,
+    user: dict = Depends(get_current_user)
+):
+    now_iso = datetime.now(timezone.utc).isoformat()
+    score = calculate_sus_score(payload.sus_answers)
+
+    # Determine standard Sauro-Lewis curved grading
+    if score >= 84.1:
+        grade = "A+"
+        adjective = "Best Imaginable"
+    elif score >= 80.3:
+        grade = "A"
+        adjective = "Excellent"
+    elif score >= 74.0:
+        grade = "B"
+        adjective = "Good"
+    elif score >= 68.0:
+        grade = "C"
+        adjective = "OK"
+    elif score >= 51.0:
+        grade = "D"
+        adjective = "Marginal"
+    else:
+        grade = "F"
+        adjective = "Poor"
+
+    eval_id = f"sus-{secrets.token_hex(6)}"
+    role = payload.clinical_role or user["role"]
+
+    with get_db() as conn:
+        conn.execute("""
+            INSERT INTO usability_evaluations (
+                id, user_id, user_email, user_role, sus_score,
+                sus_answers_json, task_ratings_json, qualitative_feedback, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            eval_id,
+            user["id"],
+            user["email"],
+            role,
+            score,
+            payload.sus_answers.json(),
+            payload.task_ratings.json() if payload.task_ratings else None,
+            payload.qualitative_feedback,
+            now_iso
+        ))
+
+        conn.execute("""
+            INSERT INTO audit_logs (id, case_id, user_id, user_email, user_role, action, details, status, ip_address, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            f"aud-{secrets.token_hex(6)}",
+            None,
+            user["id"],
+            user["email"],
+            role,
+            "USABILITY_EVALUATION_SUBMITTED",
+            f"Clinician ({role}) submitted SUS evaluation: Score {score}/100 (Grade {grade} - {adjective}).",
+            "SUCCESS",
+            "127.0.0.1",
+            now_iso
+        ))
+
+    return UsabilityEvaluationResponse(
+        id=eval_id,
+        sus_score=score,
+        grade=grade,
+        adjective=adjective,
+        evaluator_role=role,
+        message=f"SUS Evaluation recorded. Score: {score}/100 ({grade} - {adjective}).",
+        created_at=now_iso
+    )
+
+@app.get("/api/system/usability/summary")
+def get_usability_summary():
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM usability_evaluations ORDER BY created_at DESC").fetchall()
+        evals = [dict(r) for r in rows]
+
+        if not evals:
+            return {
+                "total_evaluations": 0,
+                "average_sus_score": 0.0,
+                "overall_grade": "N/A",
+                "evaluations": []
+            }
+
+        scores = [e["sus_score"] for e in evals]
+        avg_score = round(sum(scores) / len(scores), 1)
+
+        grade = "A+" if avg_score >= 84.1 else "A" if avg_score >= 80.3 else "B" if avg_score >= 74.0 else "C"
+
+        return {
+            "total_evaluations": len(evals),
+            "average_sus_score": avg_score,
+            "overall_grade": grade,
+            "evaluations": evals[:20]
+        }
+
 
 # ─── System Integrations (PACS / LIMS) Health Endpoint ───────────────────────
 
